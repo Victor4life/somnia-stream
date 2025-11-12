@@ -20,22 +20,40 @@ export default function TransactionFeed() {
   useEffect(() => {
     if (!connected || !sdsClient) return;
 
-    const unsubscribe = sdsClient.subscribeToTransactions({
-      onData: (txData: any) => {
-        const newTx: Transaction = {
-          id: txData.hash,
-          wallet: txData.wallet,
-          hash: txData.hash,
-          value: `${txData.amount} SOMI`,
-          timestamp: new Date(txData.timestamp).toLocaleTimeString(),
-          status: "completed",
-        };
+    let activeSubscription: { unsubscribe: () => void } | undefined;
 
-        setTransactions((prev) => [newTx, ...prev.slice(0, 7)]);
-      },
-    });
+    const initSubscription = async () => {
+      try {
+        const sub = await sdsClient.streams.subscribe({
+          somniaStreamsEventId: undefined, // or a specific event ID
+          ethCalls: [],
+          context: "transactions",
+          onData: (txData: any) => {
+            const newTx: Transaction = {
+              id: txData.hash,
+              wallet: txData.wallet,
+              hash: txData.hash,
+              value: `${txData.amount} SOMI`,
+              timestamp: new Date(txData.timestamp).toLocaleTimeString(),
+              status: "completed",
+            };
 
-    return () => unsubscribe();
+            setTransactions((prev) => [newTx, ...prev.slice(0, 7)]);
+          },
+          onlyPushChanges: true,
+        });
+
+        activeSubscription = sub;
+      } catch (err) {
+        console.error("❌ Failed to subscribe to transactions:", err);
+      }
+    };
+
+    initSubscription();
+
+    return () => {
+      activeSubscription?.unsubscribe();
+    };
   }, [connected, sdsClient]);
 
   return (
@@ -92,8 +110,7 @@ export default function TransactionFeed() {
                         alert(`View transaction: ${tx.hash}`);
                       }}
                     >
-                      {tx.hash}
-                      <ExternalLink className="w-3 h-3" />
+                      {tx.hash} <ExternalLink className="w-3 h-3" />
                     </a>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -122,15 +139,6 @@ export default function TransactionFeed() {
             )}
           </tbody>
         </table>
-      </div>
-
-      <div className="px-6 py-4 border-t border-gray-800 bg-gray-950/50 flex items-center justify-between">
-        <p className="text-sm text-gray-400">
-          Showing {transactions.length} recent transactions
-        </p>
-        <button className="text-sm font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
-          View All →
-        </button>
       </div>
     </div>
   );

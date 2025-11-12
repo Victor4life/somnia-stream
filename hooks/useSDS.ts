@@ -1,25 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { SDK } from "@somnia-chain/streams";
+import { createPublicClient, http, defineChain } from "viem";
 
 export function useSDS() {
   const [client, setClient] = useState<SDK | null>(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    try {
-      // Create the Somnia Data Streams client
-      const sds = new SDK({
-        network: "testnet",
-        apiKey: process.env.NEXT_PUBLIC_SOMNIA_API_KEY!,
-      });
+    async function init() {
+      try {
+        const chain = defineChain({
+          id: 1337, // Replace with actual Somnia Testnet chain ID
+          name: "Somnia Testnet",
+          network: "somnia-testnet",
+          nativeCurrency: { name: "SOMI", symbol: "SOMI", decimals: 18 },
+          rpcUrls: { default: { http: ["https://rpc.somnia.network"] } },
+        });
 
-      setClient(sds);
-      setConnected(true);
-    } catch (err) {
-      console.error("❌ Failed to initialize Somnia SDK:", err);
+        const publicClient = createPublicClient({
+          chain,
+          transport: http(),
+        });
+
+        const sdk = new SDK({ public: publicClient });
+        setClient(sdk);
+        setConnected(true);
+        console.log("✅ Connected to Somnia Data Streams");
+      } catch (err) {
+        console.error("❌ SDS initialization failed:", err);
+      }
     }
+
+    init();
   }, []);
 
   return { client, connected };

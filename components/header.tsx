@@ -19,7 +19,7 @@ export default function Header({ isConnected, onConnect }: HeaderProps) {
               <Zap className="w-6 h-6 text-gray-950" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Somnia Pulse</h1>
+              <h1 className="text-2xl font-bold text-white">Somnia</h1>
               <p className="text-xs text-gray-400">Web3 Dashboard</p>
             </div>
           </div>

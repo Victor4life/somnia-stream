@@ -10,36 +10,68 @@ export default function MetricsGrid() {
 
   const [metrics, setMetrics] = useState({
     transactions: 0,
-    tokenPrice: 2.47, // initial dummy value
-    activeUsers: 3847, // initial dummy value
+    tokenPrice: 2.47, // dummy initial value
+    activeUsers: 3847, // dummy initial value
   });
 
   useEffect(() => {
     if (!connected || !sdsClient) return;
 
-    // Subscribe to transaction stream
-    const unsubscribeTx = sdsClient.subscribe({
-      stream: "transactions",
-      onData: (txData: any) => {
-        setMetrics((prev) => ({
-          ...prev,
-          transactions: prev.transactions + 1, // increment with each transaction
-        }));
-      },
-    });
+    let txSubscription: { unsubscribe: () => void } | undefined;
+    let priceSubscription: { unsubscribe: () => void } | undefined;
+    let usersSubscription: { unsubscribe: () => void } | undefined;
 
-    // Simulate token price & active users for demo
-    const metricsInterval = setInterval(() => {
-      setMetrics((prev) => ({
-        ...prev,
-        tokenPrice: +(prev.tokenPrice + (Math.random() - 0.5) * 0.1).toFixed(2),
-        activeUsers: prev.activeUsers + Math.floor(Math.random() * 3 - 1),
-      }));
-    }, 5000);
+    const initSubscriptions = async () => {
+      try {
+        // Subscribe to transaction stream
+        txSubscription = await sdsClient.streams.subscribe({
+          somniaStreamsEventId: undefined, // or specific event ID
+          ethCalls: [],
+          context: "transactions",
+          onData: () =>
+            setMetrics((prev) => ({
+              ...prev,
+              transactions: prev.transactions + 1,
+            })),
+          onlyPushChanges: true,
+        });
+
+        // Subscribe to token price stream
+        priceSubscription = await sdsClient.streams.subscribe({
+          somniaStreamsEventId: undefined,
+          ethCalls: [],
+          context: "tokenPrice",
+          onData: (data: any) =>
+            setMetrics((prev) => ({
+              ...prev,
+              tokenPrice: data.price ?? prev.tokenPrice,
+            })),
+          onlyPushChanges: true,
+        });
+
+        // Subscribe to active users stream
+        usersSubscription = await sdsClient.streams.subscribe({
+          somniaStreamsEventId: undefined,
+          ethCalls: [],
+          context: "activeUsers",
+          onData: (data: any) =>
+            setMetrics((prev) => ({
+              ...prev,
+              activeUsers: data.count ?? prev.activeUsers,
+            })),
+          onlyPushChanges: true,
+        });
+      } catch (err) {
+        console.error("❌ Failed to initialize metrics subscriptions:", err);
+      }
+    };
+
+    initSubscriptions();
 
     return () => {
-      unsubscribeTx(); // cleanup subscription
-      clearInterval(metricsInterval); // cleanup interval
+      txSubscription?.unsubscribe();
+      priceSubscription?.unsubscribe();
+      usersSubscription?.unsubscribe();
     };
   }, [connected, sdsClient]);
 

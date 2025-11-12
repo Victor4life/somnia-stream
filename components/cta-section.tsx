@@ -37,11 +37,6 @@ export default function CTASection({ onConnect }: CTASectionProps) {
             • No credit card required. Start exploring instantly •
           </p>
         </div>
-
-        {/* Footer Text */}
-        <p className="text-sm text-gray-500 pt-8">
-          © 2025 Somnia Stream — Built with 💙 for Somnia Datastreams Hackathon
-        </p>
       </div>
     </section>
   );
