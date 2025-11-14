@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ExternalLink } from "lucide-react";
-import { useSDS } from "@/hooks/useSDS";
+import type { SDK } from "@somnia-chain/streams";
 
 interface Transaction {
   id: string;
@@ -13,28 +13,38 @@ interface Transaction {
   status: "pending" | "completed";
 }
 
-export default function TransactionFeed() {
-  const { client: sdsClient, connected } = useSDS();
+interface Props {
+  sdsClient?: SDK | null;
+  connected: boolean;
+}
+
+export default function TransactionFeed({ sdsClient, connected }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     if (!connected || !sdsClient) return;
 
-    let activeSubscription: { unsubscribe: () => void } | undefined;
+    let sub: any;
 
-    const initSubscription = async () => {
+    const init = async () => {
       try {
-        const sub = await sdsClient.streams.subscribe({
-          somniaStreamsEventId: undefined, // or a specific event ID
+        // Subscribe to STT token transfers
+        sub = await sdsClient.streams.subscribe({
+          somniaStreamsEventId: undefined,
           ethCalls: [],
-          context: "transactions",
+          context: "sttTransfers", // Hackathon-specific
           onData: (txData: any) => {
+            const hash =
+              txData?.transactionHash ?? `${Date.now().toString(16)}`;
+            const wallet = txData?.from ?? "0xunknown";
+            const amount = txData?.amount ?? txData?.value ?? "0";
+
             const newTx: Transaction = {
-              id: txData.hash,
-              wallet: txData.wallet,
-              hash: txData.hash,
-              value: `${txData.amount} SOMI`,
-              timestamp: new Date(txData.timestamp).toLocaleTimeString(),
+              id: hash,
+              wallet,
+              hash,
+              value: `${amount} STT`,
+              timestamp: new Date().toLocaleTimeString(),
               status: "completed",
             };
 
@@ -42,17 +52,15 @@ export default function TransactionFeed() {
           },
           onlyPushChanges: true,
         });
-
-        activeSubscription = sub;
       } catch (err) {
-        console.error("❌ Failed to subscribe to transactions:", err);
+        console.error("❌ Transaction subscription failed:", err);
       }
     };
 
-    initSubscription();
+    init();
 
     return () => {
-      activeSubscription?.unsubscribe();
+      sub?.unsubscribe?.();
     };
   }, [connected, sdsClient]);
 
@@ -61,7 +69,6 @@ export default function TransactionFeed() {
       <div className="px-6 py-4 border-b border-gray-800 bg-gray-900/50">
         <h2 className="text-lg font-bold text-white">Recent Transactions</h2>
       </div>
-
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -107,7 +114,7 @@ export default function TransactionFeed() {
                       className="inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 font-mono transition-colors"
                       onClick={(e) => {
                         e.preventDefault();
-                        alert(`View transaction: ${tx.hash}`);
+                        alert(`View tx: ${tx.hash}`);
                       }}
                     >
                       {tx.hash} <ExternalLink className="w-3 h-3" />

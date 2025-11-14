@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Header from "@/components/header";
 import Hero from "@/components/hero";
 import MetricsGrid from "@/components/metrics-grid";
@@ -10,30 +9,30 @@ import HowItWorks from "@/components/how-it-works";
 import CTASection from "@/components/cta-section";
 import StatsSection from "@/components/stats-section";
 import { useSDS } from "@/hooks/useSDS";
+import { useWallet } from "@/providers/wallet-provider";
 
 export default function Home() {
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-
-  // ✅ Initialize Somnia Data Streams (SDS)
+  const { walletAddress, isWalletConnected, connectWallet } = useWallet();
   const { client: sdsClient, connected: isSDSConnected } = useSDS();
-
-  const handleWalletConnect = () => setIsWalletConnected(true);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <Header isConnected={isWalletConnected} onConnect={handleWalletConnect} />
+      <Header
+        isConnected={isWalletConnected}
+        onConnect={connectWallet}
+        walletAddress={walletAddress}
+      />
 
       {!isWalletConnected ? (
         <>
-          <Hero onConnect={handleWalletConnect} />
+          <Hero onConnect={connectWallet} />
           <StatsSection />
           <Features />
           <HowItWorks />
-          <CTASection onConnect={handleWalletConnect} />
+          <CTASection onConnect={connectWallet} />
         </>
       ) : (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          {/* ✅ SDS Connection Status */}
           {!isSDSConnected ? (
             <p className="text-cyan-400 text-sm">
               Connecting to Somnia Data Streams...
@@ -44,7 +43,6 @@ export default function Home() {
             </p>
           )}
 
-          {/* ✅ Live Metrics & Transaction Feed */}
           <MetricsGrid sdsClient={sdsClient} connected={isSDSConnected} />
           <TransactionFeed sdsClient={sdsClient} connected={isSDSConnected} />
         </main>

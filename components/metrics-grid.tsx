@@ -3,75 +3,70 @@
 import { useState, useEffect } from "react";
 import MetricCard from "./metric-card";
 import { TrendingUp, BarChart3, Users } from "lucide-react";
-import { useSDS } from "@/hooks/useSDS";
+import type { SDK } from "@somnia-chain/streams";
 
-export default function MetricsGrid() {
-  const { client: sdsClient, connected } = useSDS();
+interface Props {
+  sdsClient?: SDK | null;
+  connected: boolean;
+}
 
-  const [metrics, setMetrics] = useState({
+interface Metrics {
+  transactions: number;
+  tokenPrice: number;
+  activeUsers: number;
+}
+
+export default function MetricsGrid({ sdsClient, connected }: Props) {
+  const [metrics, setMetrics] = useState<Metrics>({
     transactions: 0,
-    tokenPrice: 2.47, // dummy initial value
-    activeUsers: 3847, // dummy initial value
+    tokenPrice: 2.47,
+    activeUsers: 3847,
   });
 
   useEffect(() => {
     if (!connected || !sdsClient) return;
 
-    let txSubscription: { unsubscribe: () => void } | undefined;
-    let priceSubscription: { unsubscribe: () => void } | undefined;
-    let usersSubscription: { unsubscribe: () => void } | undefined;
+    let txSub: any;
+    let cancelled = false;
 
-    const initSubscriptions = async () => {
+    const init = async () => {
       try {
-        // Subscribe to transaction stream
-        txSubscription = await sdsClient.streams.subscribe({
-          somniaStreamsEventId: undefined, // or specific event ID
+        // Subscribe to STT token transfers
+        txSub = await sdsClient.streams.subscribe({
+          somniaStreamsEventId: undefined,
           ethCalls: [],
-          context: "transactions",
-          onData: () =>
+          context: "sttTransfers", // Hackathon-specific
+          onData: (tx: any) => {
+            // Increment total transactions
             setMetrics((prev) => ({
               ...prev,
               transactions: prev.transactions + 1,
-            })),
-          onlyPushChanges: true,
-        });
-
-        // Subscribe to token price stream
-        priceSubscription = await sdsClient.streams.subscribe({
-          somniaStreamsEventId: undefined,
-          ethCalls: [],
-          context: "tokenPrice",
-          onData: (data: any) =>
-            setMetrics((prev) => ({
-              ...prev,
-              tokenPrice: data.price ?? prev.tokenPrice,
-            })),
-          onlyPushChanges: true,
-        });
-
-        // Subscribe to active users stream
-        usersSubscription = await sdsClient.streams.subscribe({
-          somniaStreamsEventId: undefined,
-          ethCalls: [],
-          context: "activeUsers",
-          onData: (data: any) =>
-            setMetrics((prev) => ({
-              ...prev,
-              activeUsers: data.count ?? prev.activeUsers,
-            })),
+              activeUsers: prev.activeUsers + 1, // optional: count unique wallets
+            }));
+          },
           onlyPushChanges: true,
         });
       } catch (err) {
-        console.error("❌ Failed to initialize metrics subscriptions:", err);
+        console.error("❌ Metrics subscription failed:", err);
       }
     };
 
-    initSubscriptions();
+    init();
+
+    // fallback simulation for tokenPrice
+    const simInterval = setInterval(() => {
+      setMetrics((prev) => ({
+        ...prev,
+        tokenPrice: +(prev.tokenPrice + (Math.random() - 0.5) * 0.05).toFixed(
+          2
+        ),
+      }));
+    }, 5000);
 
     return () => {
-      txSubscription?.unsubscribe();
-      priceSubscription?.unsubscribe();
-      usersSubscription?.unsubscribe();
+      cancelled = true;
+      txSub?.unsubscribe?.();
+      clearInterval(simInterval);
     };
   }, [connected, sdsClient]);
 

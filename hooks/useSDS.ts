@@ -1,39 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SDK } from "@somnia-chain/streams";
-import { createPublicClient, http, defineChain } from "viem";
+import { createPublicClient, webSocket, defineChain } from "viem";
 
 export function useSDS() {
   const [client, setClient] = useState<SDK | null>(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     async function init() {
       try {
-        const chain = defineChain({
-          id: 1337, // Replace with actual Somnia Testnet chain ID
+        // Somnia Testnet config
+        const somniaTestnet = defineChain({
+          id: 50312,
           name: "Somnia Testnet",
           network: "somnia-testnet",
-          nativeCurrency: { name: "SOMI", symbol: "SOMI", decimals: 18 },
-          rpcUrls: { default: { http: ["https://rpc.somnia.network"] } },
+          nativeCurrency: { name: "STT", symbol: "STT", decimals: 18 },
+          rpcUrls: {
+            default: {
+              http: ["https://dream-rpc.somnia.network"],
+              webSocket: ["wss://dream-rpc.somnia.network/ws"], // <-- WebSocket URL
+            },
+          },
         });
 
-        const publicClient = createPublicClient({
-          chain,
-          transport: http(),
+        // Create WebSocket client
+        const wsPublicClient = createPublicClient({
+          chain: somniaTestnet,
+          transport: webSocket(somniaTestnet.rpcUrls.default.webSocket[0]),
         });
 
-        const sdk = new SDK({ public: publicClient });
+        // Initialize SDK
+        const sdk = new SDK({
+          public: wsPublicClient, // <- this accepts the WS transport
+        });
+
+        if (!mounted) return;
         setClient(sdk);
         setConnected(true);
-        console.log("✅ Connected to Somnia Data Streams");
+
+        console.log("✅ Connected to Somnia Testnet via WebSocket");
       } catch (err) {
-        console.error("❌ SDS initialization failed:", err);
+        console.error("❌ SDS init error:", err);
       }
     }
 
     init();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return { client, connected };
