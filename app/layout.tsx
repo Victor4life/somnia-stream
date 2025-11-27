@@ -10,16 +10,16 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 const _spaceMono = Space_Mono({ weight: ["400", "700"], subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Somnia Pulse - Web3 Dashboard",
+  title: "Somnia Stream - Web3 Dashboard",
   description: "Real-time crypto metrics and transaction monitoring",
-  generator: "v0.app",
+  generator: "Emeka Dev",
   icons: {
     icon: [
       { url: "/somnia-stream.png", media: "(prefers-color-scheme: light)" },
       { url: "/somnia-stream.png", media: "(prefers-color-scheme: dark)" },
       { url: "/somnia-stream.svg", type: "image/svg+xml" },
     ],
-    apple: "/apple-icon.png",
+    apple: "/somnia-stream.png",
   },
 };
 
