@@ -1,8 +1,8 @@
-# Somnia Pulse - Web3 Real-Time Dashboard
+# Somnia Stream - Web3 Real-Time Dashboard
 
 ![Somnia Pulse Logo](public/somnia-stream.png)
 
-**Somnia Pulse** is a real-time Web3 dashboard built for monitoring crypto transactions, token metrics, and user activity on the Somnia Testnet. It leverages **Somnia Data Streams (SDS)** and React/Next.js to display live blockchain events and analytics.
+**Somnia Stream** is a real-time Web3 dashboard built for monitoring crypto transactions, token metrics, and user activity on the Somnia Testnet. It leverages **Somnia Data Streams (SDS)** and React/Next.js to display live blockchain events and analytics.
 
 ---
 
@@ -126,4 +126,4 @@ MIT License – see [LICENSE](LICENSE) for details.
 
 ## 🌐 Live Demo
 
-[Somnia Pulse Live](https://somnia-stream-neon.vercel.app/)
+[Somnia Stream Live](https://somnia-stream-neon.vercel.app/)
