@@ -1,98 +1,75 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import MetricCard from "./metric-card";
-import { TrendingUp, BarChart3, Users } from "lucide-react";
-import type { SDK } from "@somnia-chain/streams";
+import {
+  LineChart,
+  Line,
+  ResponsiveContainer,
+} from "recharts";
 
-interface Props {
-  sdsClient?: SDK | null;
-  connected: boolean;
-}
-
-interface Metrics {
-  transactions: number;
-  tokenPrice: number;
-  activeUsers: number;
-}
-
-export default function MetricsGrid({ sdsClient, connected }: Props) {
-  const [metrics, setMetrics] = useState<Metrics>({
-    transactions: 0,
-    tokenPrice: 2.47,
-    activeUsers: 3847,
+export default function MetricsGrid({ tokenPrices = [], activeUsers = [], connected }) {
+  // Prepare price data safely
+  const priceData = tokenPrices.slice(0, 20).map((p) => {
+    const value = !isNaN(Number(p.newPrice)) ? Number(p.newPrice) : 0;
+    return { value };
   });
 
-  useEffect(() => {
-    if (!connected || !sdsClient) return;
+  // Prepare user data safely
+  const userData = activeUsers.slice(0, 20).map((u) => {
+    const value = !isNaN(Number(u.userCount)) ? Number(u.userCount) : 0;
+    return { value };
+  });
 
-    let txSub: any;
-    let cancelled = false;
+  // Safely get first token price
+  const firstPrice = !isNaN(Number(tokenPrices[0]?.newPrice))
+    ? Number(tokenPrices[0].newPrice).toFixed(4)
+    : "0.0000";
 
-    const init = async () => {
-      try {
-        // Subscribe to STT token transfers
-        txSub = await sdsClient.streams.subscribe({
-          somniaStreamsEventId: undefined,
-          ethCalls: [],
-          context: "sttTransfers", // Hackathon-specific
-          onData: (tx: any) => {
-            // Increment total transactions
-            setMetrics((prev) => ({
-              ...prev,
-              transactions: prev.transactions + 1,
-              activeUsers: prev.activeUsers + 1, // optional: count unique wallets
-            }));
-          },
-          onlyPushChanges: true,
-        });
-      } catch (err) {
-        console.error("❌ Metrics subscription failed:", err);
-      }
-    };
-
-    init();
-
-    // fallback simulation for tokenPrice
-    const simInterval = setInterval(() => {
-      setMetrics((prev) => ({
-        ...prev,
-        tokenPrice: +(prev.tokenPrice + (Math.random() - 0.5) * 0.05).toFixed(
-          2
-        ),
-      }));
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      txSub?.unsubscribe?.();
-      clearInterval(simInterval);
-    };
-  }, [connected, sdsClient]);
+  // Safely get first active user count
+  const firstUserCount = !isNaN(Number(activeUsers[0]?.userCount))
+    ? Number(activeUsers[0].userCount)
+    : "0";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <MetricCard
-        icon={<BarChart3 className="w-6 h-6" />}
         title="Total Transactions"
-        value={metrics.transactions.toLocaleString()}
-        change="+2.4%"
-        changeType="positive"
+        value={connected ? tokenPrices.length : "0"}
+        subtitle="+ realtime"
       />
+
       <MetricCard
-        icon={<TrendingUp className="w-6 h-6" />}
-        title="SOMI Token Price"
-        value={`$${metrics.tokenPrice.toFixed(2)}`}
-        change="+5.1%"
-        changeType="positive"
+        title="Token Price (STT)"
+        value={firstPrice}
+        subtitle="+ realtime"
+        chartData={priceData}
       />
+
       <MetricCard
-        icon={<Users className="w-6 h-6" />}
         title="Active Users"
-        value={metrics.activeUsers.toLocaleString()}
-        change="+1.2%"
-        changeType="positive"
+        value={firstUserCount}
+        subtitle="+ realtime"
+        chartData={userData}
       />
+    </div>
+  );
+}
+
+function MetricCard({ title, value, subtitle, chartData }) {
+  return (
+    <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
+      <p className="text-gray-400 text-sm">{title}</p>
+      <p className="text-3xl font-bold mt-2 metric-update">{value}</p>
+      <p className="text-cyan-400 text-xs mt-1">{subtitle}</p>
+
+      {chartData && (
+        <div className="h-12 mt-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <Line type="monotone" dataKey="value" stroke="#06b6d4" dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
